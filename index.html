@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sistema de Boletos</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #login { max-width: 300px; margin: auto; }
+    #login input { width: 100%; margin: 5px 0; padding: 8px; }
+    #login button { padding: 8px 12px; width: 100%; }
+    #app { display: none; }
+    .page { margin-top: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    nav button { margin-right: 10px; padding: 6px 12px; }
+    #logout { float: right; cursor: pointer; color: blue; text-decoration: underline; }
+    #errorBox { color: red; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <div id="login">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Usuário" />
+    <input type="password" id="password" placeholder="Senha" />
+    <button onclick="login()">Entrar</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+
+  <div id="app">
+    <div>
+      <span id="logout" onclick="logout()">Sair</span>
+      <h2>Bem-vindo, <span id="userNameDisplay"></span> (<span id="userRole"></span>)</h2>
+    </div>
+    <nav>
+      <button onclick="showPage('boletos')">Boletos em Aberto</button>
+      <button onclick="showPage('producao')">Produção Mensal</button>
+    </nav>
+
+    <div id="boletos" class="page">
+      <h3>BASE ATIVA: <span id="baseAtiva">0</span></h3>
+      <h3>BOLETOS EM ABERTO: <span id="boletosAberto">0</span></h3>
+      <table id="boletosTable">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Placa</th>
+            <th>Voluntário</th>
+            <th>Data Contrato</th>
+            <th>Status</th>
+            <th>Link do Boleto</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="producao" class="page" style="display:none;">
+      <h3>Produção do Mês</h3>
+      <table id="producaoTable">
+        <thead>
+          <tr>
+            <th>Voluntário</th>
+            <th>Produziu</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h4>Total: <span id="totalProducao">0</span></h4>
+    </div>
+
+    <div id="errorBox"></div>
+  </div>
+
+<script>
+  const users = {
+    "gabriel clubbea": { password: "123456", role: "gestor" },
+    "rodger": { password: "123456", role: "voluntario" },
+  };
+
+  let currentUser = null;
+  let sheetData = [];
+
+  function login() {
+    const userInput = document.getElementById('username').value.trim().toLowerCase();
+    const passInput = document.getElementById('password').value;
+    const errorEl = document.getElementById('loginError');
+
+    if (users[userInput] && users[userInput].password === passInput) {
+      currentUser = { name: userInput, role: users[userInput].role };
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('userNameDisplay').textContent = userInput;
+      document.getElementById('userRole').textContent = users[userInput].role;
+      loadSheetData();
+    } else {
+      errorEl.textContent = 'Usuário ou senha inválidos!';
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    sheetData = [];
+    document.getElementById('login').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+  }
+
+  function showPage(page) {
+    document.querySelectorAll('.page').forEach(div => div.style.display = 'none');
+    document.getElementById(page).style.display = 'block';
+  }
+
+  const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
+  const queryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+
+  async function loadSheetData() {
+    const errorBox = document.getElementById('errorBox');
+    errorBox.textContent = '';  // limpar erros anteriores
+
+    try {
+      const res = await fetch(queryUrl);
+      const text = await res.text();
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      // Verificando se o retorno contém "status":"error"
+      if (text.includes('"status":"error"') || text.toLowerCase().includes('access_denied')) {
+        throw new Error('Acesso negado ou status de erro no retorno do JSON');
+      }
+
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start < 0 || end < 0) {
+        throw new Error('Formato do JSON inválido (não encontrou { ou })');
+      }
+
+      const jsonText = text.substring(start, end + 1);
+      const data = JSON.parse(jsonText);
+
+      if (!data.table || !data.table.rows) {
+        throw new Error('JSON válido mas não contém dados esperados (table.rows)');
+      }
+
+      sheetData = data.table.rows.map(row => {
+        return {
+          nome: row.c[0]?.v || '',
+          placa: row.c[1]?.v || '',
+          status: row.c[2]?.v || '',
+          voluntario: row.c[3]?.v || '',
+          dataContrato: row.c[4]?.f || row.c[4]?.v || '',
+          linkBoleto: row.c[5]?.v || ''
+        };
+      });
+
+      renderBoletos();
+      renderProducao();
+    } catch (e) {
+      console.error('Erro no loadSheetData:', e);
+      errorBox.textContent = 'Erro ao carregar dados da planilha: ' + e.message;
+    }
+  }
+
+  function renderBoletos() {
+    let filtrados = currentUser.role === 'gestor'
+      ? sheetData
+      : sheetData.filter(item => item.voluntario.toLowerCase() === currentUser.name);
+
+    const baseAtiva = new Set(filtrados.map(item => item.nome.trim())).size;
+    const boletosAberto = filtrados.filter(item => (item.status || '').toLowerCase() === 'aberto').length;
+
+    document.getElementById('baseAtiva').textContent = baseAtiva;
+    document.getElementById('boletosAberto').textContent = boletosAberto;
+
+    const tbody = document.querySelector('#boletosTable tbody');
+    tbody.innerHTML = '';
+
+    filtrados.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.nome}</td>
+        <td>${item.placa}</td>
+        <td>${item.voluntario}</td>
+        <td>${item.dataContrato}</td>
+        <td>${item.status}</td>
+        <td>${item.linkBoleto ? `<a href="${item.linkBoleto}" target="_blank">Boleto</a>` : ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderProducao() {
+    const abertos = sheetData.filter(item => (item.status || '').toLowerCase() === 'aberto');
+
+    let filtrados = currentUser.role === 'gestor'
+      ? abertos
+      : abertos.filter(item => item.voluntario.toLowerCase() === currentUser.name);
+
+    const producaoMap = {};
+    filtrados.forEach(item => {
+      if(item.voluntario) {
+        const v = item.voluntario.trim();
+        producaoMap[v] = (producaoMap[v] || 0) + 1;
+      }
+    });
+
+    const tbody = document.querySelector('#producaoTable tbody');
+    tbody.innerHTML = '';
+    let total = 0;
+
+    for (const [vol, count] of Object.entries(producaoMap)) {
+      total += count;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${vol}</td><td>${count}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    document.getElementById('totalProducao').textContent = total;
+  }
+
+</script>
+
+</body>
+</html>
