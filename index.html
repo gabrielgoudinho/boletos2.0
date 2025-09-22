@@ -18,12 +18,7 @@
       flex-wrap: wrap;
     }
     header h1 { font-size: 20px; }
-    #logout {
-      cursor: pointer;
-      font-weight: bold;
-      color: #f39c12;
-      text-decoration: none;
-    }
+    #logout { cursor: pointer; font-weight: bold; color: #f39c12; text-decoration: none; }
 
     #app { max-width: 1200px; margin: 20px auto; padding: 10px; }
 
@@ -119,10 +114,6 @@
     <input type="password" id="password" placeholder="Senha" />
     <button onclick="login()">Entrar</button>
     <p id="loginError" style="color:red;"></p>
-    <p style="margin-top:8px;font-size:13px;color:#666;">
-      Exemplos de usuário: <br>
-      <strong>gabriel clubbea</strong> (master) / <strong>rodger</strong> (master) / <strong>continental / luiz ricardo</strong> (gestor)
-    </p>
   </div>
 
   <div id="app" style="display:none;">
@@ -140,24 +131,13 @@
     </nav>
 
     <div class="cards">
-      <div class="card">
-        <h3>Base Ativa</h3>
-        <span id="baseAtiva">0</span>
-      </div>
-      <div class="card">
-        <h3>Boletos em Aberto</h3>
-        <span id="boletosAberto">0</span>
-      </div>
-      <div class="card">
-        <h3>Total Produção</h3>
-        <span id="totalProducao">0</span>
-      </div>
+      <div class="card"><h3>Base Ativa</h3><span id="baseAtiva">0</span></div>
+      <div class="card"><h3>Boletos em Aberto</h3><span id="boletosAberto">0</span></div>
+      <div class="card"><h3>Total Produção</h3><span id="totalProducao">0</span></div>
     </div>
 
-    <!-- Cards dos clientes (apenas para master) -->
     <div id="cardsClientes" class="cards" style="display:none;"></div>
 
-    <!-- filtro aparece só para masters -->
     <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
       <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
       <select id="filtroCliente" onchange="renderBoletos(); renderProducao(); renderCardsClientes();">
@@ -192,7 +172,7 @@
             <th>Ativos</th>
             <th>Pendentes</th>
             <th>Reativação</th>
-            <th>Inadimplente Pendente</th>
+            <th>Inadimplente</th>
             <th>Pendente Rastreador</th>
             <th>Negado</th>
             <th>Total</th>
@@ -201,7 +181,6 @@
         <tbody></tbody>
         <tfoot></tfoot>
       </table>
-
       <div style="margin-top:20px;">
         <canvas id="graficoProducao" height="150"></canvas>
       </div>
@@ -211,271 +190,203 @@
   </div>
 
 <script>
-  const users = {
-    "gabriel clubbea": { password: "123456", role: "master", cliente: "ALL" },
-    "rodger": { password: "123456", role: "master", cliente: "ALL" },
+const users = {
+  "gabriel clubbea": { password: "123456", role: "master", cliente: "ALL" },
+  "rodger": { password: "123456", role: "master", cliente: "ALL" },
 
-    "continental / luiz ricardo": { password: "654321", role: "gestor", cliente: "CONTINENTAL" },
-    "anasc florianopolis / janaina": { password: "654321", role: "gestor", cliente: "ANASC FLORIANOPOLIS" },
-    "anasc sul / rodger": { password: "654321", role: "gestor", cliente: "ANASC SUL" },
-    "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" },
-  };
+  "continental / luiz ricardo": { password: "654321", role: "gestor", cliente: "CONTINENTAL" },
+  "anasc florianopolis / janaina": { password: "654321", role: "gestor", cliente: "ANASC FLORIANOPOLIS" },
+  "anasc sul / rodger": { password: "654321", role: "gestor", cliente: "ANASC SUL" },
+  "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" },
+};
 
-  let currentUser = null;
-  let sheetData = [];
-  let producaoData = [];
+let currentUser = null;
+let sheetData = [];
+let producaoSheets = {}; // cada planilha de produção separada
 
-  function login() {
-    const userInput = document.getElementById('username').value.trim().toLowerCase();
-    const passInput = document.getElementById('password').value;
-    const errorEl = document.getElementById('loginError');
+function login() {
+  const userInput = document.getElementById('username').value.trim().toLowerCase();
+  const passInput = document.getElementById('password').value;
+  const errorEl = document.getElementById('loginError');
 
-    if (users[userInput] && users[userInput].password === passInput) {
-      currentUser = { name: userInput, ...users[userInput] };
-      currentUser.cliente = (currentUser.cliente || "").toString();
+  if(users[userInput] && users[userInput].password === passInput){
+    currentUser = { name: userInput, ...users[userInput] };
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('userNameDisplay').textContent = userInput;
+    document.getElementById('userRole').textContent = currentUser.role;
 
-      document.getElementById('login').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      document.getElementById('userNameDisplay').textContent = userInput;
-      document.getElementById('userRole').textContent = currentUser.role;
+    if(currentUser.role === "master") document.getElementById('filtroClienteBox').style.display = "block";
 
-      if (currentUser.role === "master") {
-        document.getElementById('filtroClienteBox').style.display = "block";
-        document.getElementById('cardsClientes').style.display = "flex";
-      } else {
-        document.getElementById('filtroClienteBox').style.display = "none";
-        document.getElementById('cardsClientes').style.display = "none";
-      }
+    loadSheetData();
+  } else errorEl.textContent = 'Usuário ou senha inválidos!';
+}
 
-      loadSheetData();
-    } else {
-      errorEl.textContent = 'Usuário ou senha inválidos!';
-    }
-  }
+function logout() {
+  currentUser = null; sheetData = []; producaoSheets = {};
+  document.getElementById('login').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+  if(window.graficoProducao) { window.graficoProducao.destroy(); window.graficoProducao = null; }
+}
 
-  function logout() {
-    currentUser = null;
-    sheetData = [];
-    producaoData = [];
-    document.getElementById('login').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('loginError').textContent = '';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    if (window.graficoProducao) { window.graficoProducao.destroy(); window.graficoProducao = null; }
-  }
+function showPage(page){document.querySelectorAll('.page').forEach(d=>d.style.display='none');document.getElementById(page).style.display='block';}
 
-  function showPage(page) {
-    document.querySelectorAll('.page').forEach(div => div.style.display = 'none');
-    document.getElementById(page).style.display = 'block';
-  }
+// ==================== CARREGAR PLANILHAS ====================
+const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
+const productionSheetsNames = ['Produção Continental','Produção Anasc Norte','Produção Anasc Sul','Produção Anasc Florianopolis'];
 
-  const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
-  const queryUrl1 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`;
-  const queryUrl2 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página2`;
+async function loadSheetData(){
+  const errorBox = document.getElementById('errorBox'); errorBox.textContent='';
+  try {
+    // Boletos
+    const res1 = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`);
+    const text1 = await res1.text();
+    const json1 = JSON.parse(text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1));
+    sheetData = (json1.table.rows||[]).map(r=>({
+      nome: r.c[0]?.v||"",
+      placa: r.c[1]?.v||"",
+      status: r.c[2]?.v||"",
+      voluntario: r.c[3]?.v||"",
+      cliente: r.c[4]?.v||"",
+      dataContrato: r.c[5]?.f||r.c[5]?.v||"",
+      linkBoleto: r.c[6]?.v||""
+    }));
 
-  async function loadSheetData() {
-    const errorBox = document.getElementById('errorBox');
-    errorBox.textContent = '';
-    try {
-      const res1 = await fetch(queryUrl1);
-      const text1 = await res1.text();
-      if (!res1.ok) throw new Error(`Erro HTTP Página1: ${res1.status}`);
-      const jsonText1 = text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1);
-      const data1 = JSON.parse(jsonText1);
-      sheetData = (data1.table.rows || []).map(r => ({
-        nome: r.c[0]?.v || "",
-        placa: r.c[1]?.v || "",
-        status: r.c[2]?.v || "",
-        voluntario: (r.c[3]?.v || "").toString(),
-        cliente: (r.c[4]?.v || "").toString(),
-        dataContrato: r.c[5]?.f || r.c[5]?.v || "",
-        linkBoleto: r.c[6]?.v || ""
+    // Produção de cada planilha
+    for(const sheetName of productionSheetsNames){
+      const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`);
+      const text = await res.text();
+      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+      producaoSheets[sheetName] = (json.table.rows||[]).map(r=>({
+        voluntario: r.c[0]?.v||"",
+        ativos: Number(r.c[1]?.v||0),
+        pendentes: Number(r.c[2]?.v||0),
+        reativacao: Number(r.c[3]?.v||0),
+        inadimplente: Number(r.c[4]?.v||0),
+        pendenteRastreador: Number(r.c[5]?.v||0),
+        negado: Number(r.c[6]?.v||0),
+        total: Number(r.c[7]?.v||0)
       }));
-
-      const res2 = await fetch(queryUrl2);
-      const text2 = await res2.text();
-      if (!res2.ok) throw new Error(`Erro HTTP Página2: ${res2.status}`);
-      const jsonText2 = text2.substring(text2.indexOf('{'), text2.lastIndexOf('}')+1);
-      const data2 = JSON.parse(jsonText2);
-      producaoData = (data2.table.rows || []).map(r => ({
-        voluntario: r.c[0]?.v || "",
-        ativos: Number(r.c[1]?.v || 0),
-        pendentes: Number(r.c[2]?.v || 0),
-        reativacao: Number(r.c[3]?.v || 0),
-        inadimplente: Number(r.c[4]?.v || 0),
-        pendenteRastreador: Number(r.c[5]?.v || 0),
-        negado: Number(r.c[6]?.v || 0),
-        total: Number(r.c[7]?.v || 0)
-      }));
-
-      if (currentUser.role === "master") {
-        const clientes = [...new Set(sheetData.map(x => x.cliente).filter(Boolean))];
-        const select = document.getElementById("filtroCliente");
-        select.innerHTML = "<option value=''>Todos</option>";
-        clientes.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c;
-          opt.textContent = c;
-          select.appendChild(opt);
-        });
-      }
-
-      renderBoletos();
-      renderProducao();
-      renderCardsClientes();
-    } catch (e) {
-      console.error(e);
-      errorBox.textContent = "Erro ao carregar dados: " + e.message;
-    }
-  }
-
-  function renderBoletos() {
-    let filtrados = sheetData.slice();
-    if (!currentUser) return;
-
-    if (currentUser.role === "master") {
-      const clienteFiltro = document.getElementById("filtroCliente").value;
-      if (clienteFiltro) filtrados = filtrados.filter(x => x.cliente === clienteFiltro);
-    } else if (currentUser.role === "gestor") {
-      filtrados = filtrados.filter(item => (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase());
-    } else {
-      filtrados = filtrados.filter(item =>
-        (item.voluntario || "").toLowerCase() === currentUser.name.toLowerCase() &&
-        (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()
-      );
     }
 
-    const baseAtiva = new Set(filtrados.map(x => x.nome.trim())).size;
-    const boletosAberto = filtrados.filter(x => (x.status || "").toLowerCase() === "aberto").length;
+    renderBoletos();
+    renderProducao();
+    renderCardsClientes();
 
-    document.getElementById('baseAtiva').textContent = baseAtiva;
-    document.getElementById('boletosAberto').textContent = boletosAberto;
-
-    const tbody = document.querySelector('#boletosTable tbody');
-    tbody.innerHTML = '';
-    filtrados.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${item.nome}</td>
-        <td>${item.placa}</td>
-        <td>${item.voluntario}</td>
-        <td>${item.cliente}</td>
-        <td>${item.dataContrato}</td>
-        <td>${item.status}</td>
-        <td>${item.linkBoleto ? `<a href="${item.linkBoleto}" target="_blank">🔗 Boleto</a>` : ''}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function renderProducao() {
-    if (!currentUser) return;
-    let filtrados = producaoData.slice();
-
-    if (currentUser.role === "master") {
-      const clienteFiltro = document.getElementById("filtroCliente").value;
-      if (clienteFiltro) {
-        const volsDoCliente = new Set(sheetData.filter(s => s.cliente === clienteFiltro).map(s => s.voluntario));
-        filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
-      }
-    } else if (currentUser.role === "gestor") {
-      const volsDoCliente = new Set(sheetData.filter(s => (s.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()).map(s => s.voluntario));
-      filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
-    } else {
-      filtrados = filtrados.filter(p => (p.voluntario || "").toLowerCase() === currentUser.name.toLowerCase());
+    if(currentUser.role==="master"){
+      const clientes = [...new Set(sheetData.map(x=>x.cliente).filter(Boolean))];
+      const select = document.getElementById("filtroCliente");
+      select.innerHTML="<option value=''>Todos</option>";
+      clientes.forEach(c=>{const opt=document.createElement("option");opt.value=c;opt.textContent=c;select.appendChild(opt);});
     }
 
-    const tbody = document.querySelector('#producaoTable tbody');
-    const tfoot = document.querySelector('#producaoTable tfoot');
-    tbody.innerHTML = '';
-    tfoot.innerHTML = '';
+  } catch(e){ console.error(e); errorBox.textContent="Erro ao carregar dados: "+e.message; }
+}
 
-    let soma = {ativos:0, pendentes:0, reativacao:0, inadimplente:0, pendenteRastreador:0, negado:0, total:0};
+// ==================== RENDER BOLETOS ====================
+function renderBoletos(){
+  if(!currentUser) return;
+  let filtrados = sheetData.slice();
+  if(currentUser.role==="master"){
+    const clienteFiltro = document.getElementById("filtroCliente").value;
+    if(clienteFiltro) filtrados = filtrados.filter(x=>x.cliente===clienteFiltro);
+  } else filtrados = filtrados.filter(item=>(item.cliente||"").toLowerCase() === (currentUser.cliente||"").toLowerCase());
 
-    filtrados.forEach(item => {
-      soma.ativos += item.ativos;
-      soma.pendentes += item.pendentes;
-      soma.reativacao += item.reativacao;
-      soma.inadimplente += item.inadimplente;
-      soma.pendenteRastreador += item.pendenteRastreador;
-      soma.negado += item.negado;
-      soma.total += item.total;
+  document.getElementById('baseAtiva').textContent = new Set(filtrados.map(x=>x.nome.trim())).size;
+  document.getElementById('boletosAberto').textContent = filtrados.filter(x=>x.status.toLowerCase()==="aberto").length;
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${item.voluntario}</td>
-        <td>${item.ativos}</td>
-        <td>${item.pendentes}</td>
-        <td>${item.reativacao}</td>
-        <td>${item.inadimplente}</td>
-        <td>${item.pendenteRastreador}</td>
-        <td>${item.negado}</td>
-        <td>${item.total}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    tfoot.innerHTML = `
-      <tr style="font-weight:bold; background:#ecf0f1;">
-        <td>Total</td>
-        <td>${soma.ativos}</td>
-        <td>${soma.pendentes}</td>
-        <td>${soma.reativacao}</td>
-        <td>${soma.inadimplente}</td>
-        <td>${soma.pendenteRastreador}</td>
-        <td>${soma.negado}</td>
-        <td>${soma.total}</td>
-      </tr>
+  const tbody = document.querySelector('#boletosTable tbody'); tbody.innerHTML='';
+  filtrados.forEach(item=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML=`
+      <td>${item.nome}</td>
+      <td>${item.placa}</td>
+      <td>${item.voluntario}</td>
+      <td>${item.cliente}</td>
+      <td>${item.dataContrato}</td>
+      <td>${item.status}</td>
+      <td>${item.linkBoleto ? `<a href="${item.linkBoleto}" target="_blank">🔗 Boleto</a>` : ''}</td>
     `;
+    tbody.appendChild(tr);
+  });
+}
 
-    document.getElementById('totalProducao').textContent = soma.total;
+// ==================== RENDER PRODUÇÃO ====================
+function renderProducao(){
+  if(!currentUser) return;
+  let allFiltered = [];
 
-    const ctx = document.getElementById("graficoProducao").getContext("2d");
-    if (window.graficoProducao) window.graficoProducao.destroy();
-    const labels = filtrados.map(x => x.voluntario);
-    const totals = filtrados.map(x => x.total);
-
-    window.graficoProducao = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "Total por Voluntário",
-          data: totals,
-          backgroundColor: labels.map(() => `rgba(54, 162, 235, 0.7)`)
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: "Total por Voluntário" }
-        },
-        scales: {
-          x: { title: { display: true, text: "Voluntário" } },
-          y: { beginAtZero: true, title: { display: true, text: "Total" } }
-        }
-      }
-    });
+  for(const [sheetName,data] of Object.entries(producaoSheets)){
+    let filtered = data.slice();
+    const clienteFiltro = document.getElementById("filtroCliente")?.value;
+    if(currentUser.role==="master" && clienteFiltro){
+      if(sheetName.toLowerCase().includes(clienteFiltro.toLowerCase())) filtered=filtered;
+      else filtered=[];
+    } else if(currentUser.role==="gestor"){
+      if(!sheetName.toLowerCase().includes(currentUser.cliente.toLowerCase())) filtered=[];
+    }
+    allFiltered = allFiltered.concat(filtered);
   }
 
-  function renderCardsClientes() {
-    if (!currentUser || currentUser.role !== "master") return;
+  const tbody = document.querySelector('#producaoTable tbody');
+  const tfoot = document.querySelector('#producaoTable tfoot'); tbody.innerHTML=''; tfoot.innerHTML='';
 
-    const clientesOrdem = ["ANASC FLORIANOPOLIS", "ANASC SUL", "ANASC NORTE", "CONTINENTAL"];
-    const container = document.getElementById("cardsClientes");
-    container.innerHTML = '';
+  let soma={ativos:0,pendentes:0,reativacao:0,inadimplente:0,pendenteRastreador:0,negado:0,total:0};
+  allFiltered.forEach(item=>{
+    soma.ativos+=item.ativos;soma.pendentes+=item.pendentes;soma.reativacao+=item.reativacao;
+    soma.inadimplente+=item.inadimplente;soma.pendenteRastreador+=item.pendenteRastreador;
+    soma.negado+=item.negado;soma.total+=item.total;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${item.voluntario}</td>
+      <td>${item.ativos}</td>
+      <td>${item.pendentes}</td>
+      <td>${item.reativacao}</td>
+      <td>${item.inadimplente}</td>
+      <td>${item.pendenteRastreador}</td>
+      <td>${item.negado}</td>
+      <td>${item.total}</td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-    clientesOrdem.forEach(cliente => {
-      const count = new Set(sheetData.filter(x => x.cliente.toUpperCase() === cliente).map(x => x.nome.trim())).size;
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `<h3>${cliente}</h3><span>${count}</span>`;
-      container.appendChild(card);
-    });
-  }
+  tfoot.innerHTML=`
+    <tr style="font-weight:bold; background:#ecf0f1;">
+      <td>Total</td>
+      <td>${soma.ativos}</td>
+      <td>${soma.pendentes}</td>
+      <td>${soma.reativacao}</td>
+      <td>${soma.inadimplente}</td>
+      <td>${soma.pendenteRastreador}</td>
+      <td>${soma.negado}</td>
+      <td>${soma.total}</td>
+    </tr>
+  `;
+  document.getElementById('totalProducao').textContent = soma.total;
 
+  const ctx = document.getElementById("graficoProducao").getContext("2d");
+  if(window.graficoProducao) window.graficoProducao.destroy();
+  window.graficoProducao = new Chart(ctx,{
+    type:"bar",
+    data:{ labels:allFiltered.map(x=>x.voluntario), datasets:[{label:"Total",data:allFiltered.map(x=>x.total), backgroundColor:allFiltered.map(()=> "rgba(54,162,235,0.7)")}] },
+    options:{responsive:true, plugins:{legend:{display:false}, title:{display:true,text:"Total por Voluntário"}}, scales:{x:{title:{display:true,text:"Voluntário"}}, y:{beginAtZero:true, title:{display:true,text:"Total"}}}}
+  });
+}
+
+// ==================== RENDER CARDS CLIENTES ====================
+function renderCardsClientes(){
+  if(!currentUser || currentUser.role!=="master") return;
+  const container=document.getElementById("cardsClientes"); container.innerHTML=''; container.style.display='flex';
+  const clientesOrdem=['ANASC FLORIANOPOLIS','ANASC SUL','ANASC NORTE','CONTINENTAL'];
+
+  clientesOrdem.forEach(cliente=>{
+    let count = new Set(sheetData.filter(x=>x.cliente.toUpperCase()===cliente).map(x=>x.nome.trim())).size;
+    const card = document.createElement("div");
+    card.className="card";
+    card.innerHTML=`<h3>${cliente}</h3><span>${count}</span>`;
+    container.appendChild(card);
+  });
+}
 </script>
 
 </body>
