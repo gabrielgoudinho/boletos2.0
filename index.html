@@ -154,10 +154,13 @@
       </div>
     </div>
 
+    <!-- Cards dos clientes (apenas para master) -->
+    <div id="cardsClientes" class="cards" style="display:none;"></div>
+
     <!-- filtro aparece só para masters -->
     <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
       <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
-      <select id="filtroCliente" onchange="renderBoletos(); renderProducao();">
+      <select id="filtroCliente" onchange="renderBoletos(); renderProducao(); renderCardsClientes();">
         <option value="">Todos</option>
       </select>
     </div>
@@ -208,7 +211,6 @@
   </div>
 
 <script>
-  // Usuários: chaves em lowercase porque no login fazemos .toLowerCase()
   const users = {
     "gabriel clubbea": { password: "123456", role: "master", cliente: "ALL" },
     "rodger": { password: "123456", role: "master", cliente: "ALL" },
@@ -217,9 +219,6 @@
     "anasc florianopolis / janaina": { password: "654321", role: "gestor", cliente: "ANASC FLORIANOPOLIS" },
     "anasc sul / rodger": { password: "654321", role: "gestor", cliente: "ANASC SUL" },
     "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" },
-
-    // Se quiser adicionar voluntários que façam login direto, coloque aqui:
-    // "voluntario exemplo": { password: "000000", role: "voluntario", cliente: "ANASC SUL" },
   };
 
   let currentUser = null;
@@ -233,7 +232,6 @@
 
     if (users[userInput] && users[userInput].password === passInput) {
       currentUser = { name: userInput, ...users[userInput] };
-      // garantir cliente string em lowercase para comparação segura
       currentUser.cliente = (currentUser.cliente || "").toString();
 
       document.getElementById('login').style.display = 'none';
@@ -243,8 +241,10 @@
 
       if (currentUser.role === "master") {
         document.getElementById('filtroClienteBox').style.display = "block";
+        document.getElementById('cardsClientes').style.display = "flex";
       } else {
         document.getElementById('filtroClienteBox').style.display = "none";
+        document.getElementById('cardsClientes').style.display = "none";
       }
 
       loadSheetData();
@@ -262,7 +262,6 @@
     document.getElementById('loginError').textContent = '';
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
-    // destruir gráfico se existir
     if (window.graficoProducao) { window.graficoProducao.destroy(); window.graficoProducao = null; }
   }
 
@@ -271,9 +270,7 @@
     document.getElementById(page).style.display = 'block';
   }
 
-  // Ajuste aqui seu sheetId
   const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
-  // Observação: os nomes das planilhas (sheet) precisam bater com os seus (use acentos se usar)
   const queryUrl1 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`;
   const queryUrl2 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página2`;
 
@@ -281,7 +278,6 @@
     const errorBox = document.getElementById('errorBox');
     errorBox.textContent = '';
     try {
-      // Página1 (boletos)
       const res1 = await fetch(queryUrl1);
       const text1 = await res1.text();
       if (!res1.ok) throw new Error(`Erro HTTP Página1: ${res1.status}`);
@@ -297,7 +293,6 @@
         linkBoleto: r.c[6]?.v || ""
       }));
 
-      // Página2 (produção)
       const res2 = await fetch(queryUrl2);
       const text2 = await res2.text();
       if (!res2.ok) throw new Error(`Erro HTTP Página2: ${res2.status}`);
@@ -314,7 +309,6 @@
         total: Number(r.c[7]?.v || 0)
       }));
 
-      // preencher filtro clientes (masters)
       if (currentUser.role === "master") {
         const clientes = [...new Set(sheetData.map(x => x.cliente).filter(Boolean))];
         const select = document.getElementById("filtroCliente");
@@ -329,6 +323,7 @@
 
       renderBoletos();
       renderProducao();
+      renderCardsClientes();
     } catch (e) {
       console.error(e);
       errorBox.textContent = "Erro ao carregar dados: " + e.message;
@@ -337,7 +332,6 @@
 
   function renderBoletos() {
     let filtrados = sheetData.slice();
-
     if (!currentUser) return;
 
     if (currentUser.role === "master") {
@@ -345,7 +339,7 @@
       if (clienteFiltro) filtrados = filtrados.filter(x => x.cliente === clienteFiltro);
     } else if (currentUser.role === "gestor") {
       filtrados = filtrados.filter(item => (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase());
-    } else { // voluntário
+    } else {
       filtrados = filtrados.filter(item =>
         (item.voluntario || "").toLowerCase() === currentUser.name.toLowerCase() &&
         (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()
@@ -377,20 +371,18 @@
 
   function renderProducao() {
     if (!currentUser) return;
-
     let filtrados = producaoData.slice();
 
     if (currentUser.role === "master") {
       const clienteFiltro = document.getElementById("filtroCliente").value;
       if (clienteFiltro) {
-        // manter voluntários que aparecem na sheetData com esse cliente
         const volsDoCliente = new Set(sheetData.filter(s => s.cliente === clienteFiltro).map(s => s.voluntario));
         filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
       }
     } else if (currentUser.role === "gestor") {
       const volsDoCliente = new Set(sheetData.filter(s => (s.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()).map(s => s.voluntario));
       filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
-    } else { // voluntario
+    } else {
       filtrados = filtrados.filter(p => (p.voluntario || "").toLowerCase() === currentUser.name.toLowerCase());
     }
 
@@ -399,7 +391,6 @@
     tbody.innerHTML = '';
     tfoot.innerHTML = '';
 
-    // somas
     let soma = {ativos:0, pendentes:0, reativacao:0, inadimplente:0, pendenteRastreador:0, negado:0, total:0};
 
     filtrados.forEach(item => {
@@ -440,7 +431,6 @@
 
     document.getElementById('totalProducao').textContent = soma.total;
 
-    // Gráfico: apenas o total de cada voluntário
     const ctx = document.getElementById("graficoProducao").getContext("2d");
     if (window.graficoProducao) window.graficoProducao.destroy();
     const labels = filtrados.map(x => x.voluntario);
@@ -453,7 +443,7 @@
         datasets: [{
           label: "Total por Voluntário",
           data: totals,
-          backgroundColor: labels.map((_,i) => `rgba(54, 162, 235, 0.7)`)
+          backgroundColor: labels.map(() => `rgba(54, 162, 235, 0.7)`)
         }]
       },
       options: {
@@ -469,8 +459,24 @@
       }
     });
   }
+
+  function renderCardsClientes() {
+    if (!currentUser || currentUser.role !== "master") return;
+
+    const clientesOrdem = ["ANASC FLORIANOPOLIS", "ANASC SUL", "ANASC NORTE", "CONTINENTAL"];
+    const container = document.getElementById("cardsClientes");
+    container.innerHTML = '';
+
+    clientesOrdem.forEach(cliente => {
+      const count = new Set(sheetData.filter(x => x.cliente.toUpperCase() === cliente).map(x => x.nome.trim())).size;
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h3>${cliente}</h3><span>${count}</span>`;
+      container.appendChild(card);
+    });
+  }
+
 </script>
 
 </body>
 </html>
-
