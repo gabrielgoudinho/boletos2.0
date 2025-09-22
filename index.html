@@ -47,7 +47,7 @@ nav button:hover { background: #2980b9; }
   text-align: center;
 }
 .card h3 { font-size: 16px; margin-bottom: 10px; }
-.card span { font-size: 24px; font-weight: bold; color: #2c3e50; }
+.card span, .card strong { font-size: 24px; font-weight: bold; color: #2c3e50; }
 .card p { font-size: 14px; margin: 5px 0; }
 
 .page {
@@ -134,17 +134,14 @@ tr:hover { background: #f1f1f1; }
     <button onclick="showPage('producao')">📊 Produção Mensal</button>
   </nav>
 
-  <!-- CARDS GERAIS -->
   <div class="cards" id="cardsTotais">
     <div class="card"><h3>Base Ativa Total</h3><span id="baseAtivaTotal">0</span></div>
     <div class="card"><h3>Boletos em Aberto Total</h3><span id="boletosAbertoTotal">0</span></div>
     <div class="card"><h3>Produção Total</h3><span id="totalProducaoTotal">0</span></div>
   </div>
 
-  <!-- CARDS CLIENTES -->
   <div id="cardsClientes" class="cards" style="display:flex;"></div>
 
-  <!-- filtro clientes (só para masters) -->
   <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
     <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
     <select id="filtroCliente" onchange="renderBoletos(); renderProducao(); renderCardsClientes();">
@@ -210,7 +207,9 @@ const users = {
 
 let currentUser = null;
 let sheetData = [];
+let boletosSheets = {};
 let producaoSheets = {};
+let boletosSheetNames = ['BOLETOS ANASC FLORIANOPOLIS','BOLETOS ANASC SUL','BOLETOS ANASC NORTE','BOLETOS CONTINENTAL'];
 let productionSheetsNames = ['PRODUÇÃO CONTINENTAL','PRODUÇÃO ANASC NORTE','PRODUÇÃO ANASC SUL','PRODUÇÃO ANASC FLORIANOPOLIS'];
 
 // ==================== LOGIN ====================
@@ -230,7 +229,7 @@ function login(){
 }
 
 function logout(){
-  currentUser=null; sheetData=[]; producaoSheets={};
+  currentUser=null; sheetData=[]; producaoSheets={}; boletosSheets={};
   document.getElementById('login').style.display='block';
   document.getElementById('app').style.display='none';
   document.getElementById('loginError').textContent='';
@@ -249,28 +248,33 @@ const sheetId='1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
 async function loadSheetData(){
   const errorBox=document.getElementById('errorBox'); errorBox.textContent='';
   try{
-    // Página1 = boletos
-    const res1 = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`);
-    const text1 = await res1.text();
-    const jsonText1 = text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1);
-    const data1 = JSON.parse(jsonText1);
-    sheetData=(data1.table.rows||[]).map(r=>({
-      nome:r.c[0]?.v||"",
-      placa:r.c[1]?.v||"",
-      status:r.c[2]?.v||"",
-      voluntario:(r.c[3]?.v||"").toString(),
-      cliente:(r.c[4]?.v||"").toString(),
-      dataContrato:r.c[5]?.f||r.c[5]?.v||"",
-      linkBoleto:r.c[6]?.v||""
-    }));
+    // ===== BOLETOS =====
+    for(const sheetName of boletosSheetNames){
+      const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}`);
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
+      const data = JSON.parse(jsonText);
+      boletosSheets[sheetName] = (data.table.rows||[]).map(r=>({
+        nome:r.c[0]?.v||"",
+        placa:r.c[1]?.v||"",
+        status:r.c[2]?.v||"",
+        voluntario:(r.c[3]?.v||"").toString(),
+        cliente:(r.c[4]?.v||"").toString(),
+        dataContrato:r.c[5]?.f||r.c[5]?.v||"",
+        linkBoleto:r.c[6]?.v||""
+      }));
+    }
 
-    // Produção → várias planilhas
+    // juntar tudo para sheetData
+    sheetData = [].concat(...Object.values(boletosSheets));
+
+    // ===== PRODUÇÃO =====
     for(const sheetName of productionSheetsNames){
       const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}`);
       const text = await res.text();
       const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
       const data = JSON.parse(jsonText);
-      producaoSheets[sheetName]=(data.table.rows||[]).map(r=>({
+      producaoSheets[sheetName] = (data.table.rows||[]).map(r=>({
         voluntario:r.c[0]?.v||"",
         ativos:Number(r.c[1]?.v||0),
         pendentes:Number(r.c[2]?.v||0),
@@ -342,7 +346,6 @@ function renderProducao(){
 
   document.getElementById('totalProducaoTotal').textContent = soma.total;
 
-  // gráfico
   const ctx=document.getElementById("graficoProducao").getContext("2d");
   if(window.graficoProducao) window.graficoProducao.destroy();
   const labels=filtrados.map(x=>x.voluntario); const totals=filtrados.map(x=>x.total);
@@ -376,7 +379,7 @@ function renderCardsClientes(){
     container.appendChild(card);
   });
 
-  // Atualiza totais gerais
+  // Totais gerais
   document.getElementById('baseAtivaTotal').textContent = new Set(sheetData.map(x=>x.nome.trim())).size;
   document.getElementById('boletosAbertoTotal').textContent = sheetData.filter(x=>x.status.toLowerCase()==='aberto').length;
   let somaTotal=0;
