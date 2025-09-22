@@ -1,312 +1,311 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Sistema de Boletos</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #333; }
+<meta charset="UTF-8" />
+<title>Sistema de Boletos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #333; }
 
-    header {
-      background: #2c3e50;
-      color: #fff;
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    header h1 { font-size: 20px; }
-    #logout { cursor: pointer; font-weight: bold; color: #f39c12; text-decoration: none; }
+header {
+  background: #2c3e50;
+  color: #fff;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+header h1 { font-size: 20px; }
+#logout { cursor: pointer; font-weight: bold; color: #f39c12; text-decoration: none; }
 
-    #app { max-width: 1200px; margin: 20px auto; padding: 10px; }
+#app { max-width: 1200px; margin: 20px auto; padding: 10px; }
 
-    nav { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; }
-    nav button {
-      flex: 1;
-      min-width: 140px;
-      padding: 10px;
-      border: none;
-      background: #3498db;
-      color: #fff;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    nav button:hover { background: #2980b9; }
+nav { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; }
+nav button {
+  flex: 1;
+  min-width: 140px;
+  padding: 10px;
+  border: none;
+  background: #3498db;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+nav button:hover { background: #2980b9; }
 
-    .cards { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-    .card {
-      flex: 1;
-      min-width: 200px;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .card h3 { font-size: 16px; margin-bottom: 10px; }
-    .card span { font-size: 24px; font-weight: bold; color: #2c3e50; }
+.cards { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.card {
+  flex: 1;
+  min-width: 200px;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.card h3 { font-size: 16px; margin-bottom: 10px; }
+.card span { font-size: 24px; font-weight: bold; color: #2c3e50; }
+.card p { font-size: 14px; margin: 5px 0; }
 
-    .page {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      overflow-x: auto;
-      margin-bottom: 20px;
-    }
+.page {
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
 
-    table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; min-width: 600px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background: #34495e; color: #fff; }
-    tr:nth-child(even) { background: #f9f9f9; }
-    tr:hover { background: #f1f1f1; }
+table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; min-width: 600px; }
+th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background: #34495e; color: #fff; }
+tr:nth-child(even) { background: #f9f9f9; }
+tr:hover { background: #f1f1f1; }
 
-    #login {
-      max-width: 350px;
-      margin: 100px auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    #login h2 { margin-bottom: 15px; text-align: center; }
-    #login input, #login select {
-      width: 100%;
-      margin: 8px 0;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    #login button {
-      width: 100%;
-      padding: 10px;
-      background: #27ae60;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    #login button:hover { background: #1e8449; }
+#login {
+  max-width: 350px;
+  margin: 100px auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+#login h2 { margin-bottom: 15px; text-align: center; }
+#login input, #login select {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+#login button {
+  width: 100%;
+  padding: 10px;
+  background: #27ae60;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+#login button:hover { background: #1e8449; }
 
-    #loginError { margin-top: 10px; }
-    #errorBox { color: red; margin-top: 20px; }
+#errorBox { color: red; margin-top: 20px; }
 
-    @media (max-width: 768px) {
-      header { flex-direction: column; align-items: flex-start; gap: 10px; }
-      nav { flex-direction: column; }
-      nav button { width: 100%; }
-      .cards { flex-direction: column; }
-      .card { width: 100%; }
-      table { font-size: 13px; }
-    }
-  </style>
+@media (max-width: 768px) {
+  header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  nav { flex-direction: column; }
+  nav button { width: 100%; }
+  .cards { flex-direction: column; }
+  .card { width: 100%; }
+  table { font-size: 13px; }
+}
+</style>
 </head>
 <body>
 
-  <div id="login">
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Usuário (ex: gabriel clubbea)" />
-    <input type="password" id="password" placeholder="Senha" />
-    <button onclick="login()">Entrar</button>
-    <p id="loginError" style="color:red;"></p>
+<div id="login">
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Usuário (ex: gabriel clubbea)" />
+  <input type="password" id="password" placeholder="Senha" />
+  <button onclick="login()">Entrar</button>
+  <p id="loginError" style="color:red;"></p>
+  <p style="margin-top:8px;font-size:13px;color:#666;">
+    Exemplos de usuário: <br>
+    <strong>gabriel clubbea</strong> (master) / <strong>rodger</strong> (master) / <strong>continental / luiz ricardo</strong> (gestor)
+  </p>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>Sistema de Boletos</h1>
+    <div>
+      <span id="userNameDisplay"></span> (<span id="userRole"></span>) | 
+      <a id="logout" onclick="logout()">Sair</a>
+    </div>
+  </header>
+
+  <nav>
+    <button onclick="showPage('boletos')">📄 Boletos em Aberto</button>
+    <button onclick="showPage('producao')">📊 Produção Mensal</button>
+  </nav>
+
+  <!-- CARDS GERAIS -->
+  <div class="cards" id="cardsTotais">
+    <div class="card"><h3>Base Ativa Total</h3><span id="baseAtivaTotal">0</span></div>
+    <div class="card"><h3>Boletos em Aberto Total</h3><span id="boletosAbertoTotal">0</span></div>
+    <div class="card"><h3>Produção Total</h3><span id="totalProducaoTotal">0</span></div>
   </div>
 
-  <div id="app" style="display:none;">
-    <header>
-      <h1>Sistema de Boletos</h1>
-      <div>
-        <span id="userNameDisplay"></span> (<span id="userRole"></span>) | 
-        <a id="logout" onclick="logout()">Sair</a>
-      </div>
-    </header>
+  <!-- CARDS CLIENTES -->
+  <div id="cardsClientes" class="cards" style="display:flex;"></div>
 
-    <nav>
-      <button onclick="showPage('boletos')">📄 Boletos em Aberto</button>
-      <button onclick="showPage('producao')">📊 Produção Mensal</button>
-    </nav>
-
-    <div class="cards">
-      <div class="card"><h3>Base Ativa</h3><span id="baseAtiva">0</span></div>
-      <div class="card"><h3>Boletos em Aberto</h3><span id="boletosAberto">0</span></div>
-      <div class="card"><h3>Total Produção</h3><span id="totalProducao">0</span></div>
-    </div>
-
-    <div id="cardsClientes" class="cards" style="display:none;"></div>
-
-    <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
-      <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
-      <select id="filtroCliente" onchange="renderBoletos(); renderProducao(); renderCardsClientes();">
-        <option value="">Todos</option>
-      </select>
-    </div>
-
-    <div id="boletos" class="page">
-      <h3>Lista de Boletos</h3>
-      <table id="boletosTable">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Placa</th>
-            <th>Voluntário</th>
-            <th>Cliente</th>
-            <th>Data Contrato</th>
-            <th>Status</th>
-            <th>Link do Boleto</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div id="producao" class="page" style="display:none;">
-      <h3>Produção do Mês</h3>
-      <table id="producaoTable">
-        <thead>
-          <tr>
-            <th>Voluntário</th>
-            <th>Ativos</th>
-            <th>Pendentes</th>
-            <th>Reativação</th>
-            <th>Inadimplente</th>
-            <th>Pendente Rastreador</th>
-            <th>Negado</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>
-      <div style="margin-top:20px;">
-        <canvas id="graficoProducao" height="150"></canvas>
-      </div>
-    </div>
-
-    <div id="errorBox"></div>
+  <!-- filtro clientes (só para masters) -->
+  <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
+    <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
+    <select id="filtroCliente" onchange="renderBoletos(); renderProducao(); renderCardsClientes();">
+      <option value="">Todos</option>
+    </select>
   </div>
+
+  <div id="boletos" class="page">
+    <h3>Lista de Boletos</h3>
+    <table id="boletosTable">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Placa</th>
+          <th>Voluntário</th>
+          <th>Cliente</th>
+          <th>Data Contrato</th>
+          <th>Status</th>
+          <th>Link do Boleto</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="producao" class="page" style="display:none;">
+    <h3>Produção do Mês</h3>
+    <table id="producaoTable">
+      <thead>
+        <tr>
+          <th>Voluntário</th>
+          <th>Ativos</th>
+          <th>Pendentes</th>
+          <th>Reativação</th>
+          <th>Inadimplente Pendente</th>
+          <th>Pendente Rastreador</th>
+          <th>Negado</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot></tfoot>
+    </table>
+
+    <div style="margin-top:20px;">
+      <canvas id="graficoProducao" height="150"></canvas>
+    </div>
+  </div>
+
+  <div id="errorBox"></div>
+</div>
 
 <script>
+// ==================== USUÁRIOS ====================
 const users = {
   "gabriel clubbea": { password: "123456", role: "master", cliente: "ALL" },
   "rodger": { password: "123456", role: "master", cliente: "ALL" },
-
   "continental / luiz ricardo": { password: "654321", role: "gestor", cliente: "CONTINENTAL" },
   "anasc florianopolis / janaina": { password: "654321", role: "gestor", cliente: "ANASC FLORIANOPOLIS" },
   "anasc sul / rodger": { password: "654321", role: "gestor", cliente: "ANASC SUL" },
-  "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" },
+  "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" }
 };
 
 let currentUser = null;
 let sheetData = [];
-let producaoSheets = {}; // cada planilha de produção separada
+let producaoSheets = {};
+let productionSheetsNames = ['PRODUÇÃO CONTINENTAL','PRODUÇÃO ANASC NORTE','PRODUÇÃO ANASC SUL','PRODUÇÃO ANASC FLORIANOPOLIS'];
 
-function login() {
+// ==================== LOGIN ====================
+function login(){
   const userInput = document.getElementById('username').value.trim().toLowerCase();
   const passInput = document.getElementById('password').value;
   const errorEl = document.getElementById('loginError');
-
   if(users[userInput] && users[userInput].password === passInput){
     currentUser = { name: userInput, ...users[userInput] };
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('userNameDisplay').textContent = userInput;
-    document.getElementById('userRole').textContent = currentUser.role;
-
-    if(currentUser.role === "master") document.getElementById('filtroClienteBox').style.display = "block";
-
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('userNameDisplay').textContent=userInput;
+    document.getElementById('userRole').textContent=currentUser.role;
+    document.getElementById('filtroClienteBox').style.display=(currentUser.role==='master')?'block':'none';
     loadSheetData();
-  } else errorEl.textContent = 'Usuário ou senha inválidos!';
+  } else { errorEl.textContent='Usuário ou senha inválidos!'; }
 }
 
-function logout() {
-  currentUser = null; sheetData = []; producaoSheets = {};
-  document.getElementById('login').style.display = 'block';
-  document.getElementById('app').style.display = 'none';
-  if(window.graficoProducao) { window.graficoProducao.destroy(); window.graficoProducao = null; }
+function logout(){
+  currentUser=null; sheetData=[]; producaoSheets={};
+  document.getElementById('login').style.display='block';
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginError').textContent='';
+  document.getElementById('username').value='';
+  document.getElementById('password').value='';
+  if(window.graficoProducao){ window.graficoProducao.destroy(); window.graficoProducao=null; }
 }
 
-function showPage(page){document.querySelectorAll('.page').forEach(d=>d.style.display='none');document.getElementById(page).style.display='block';}
+function showPage(page){
+  document.querySelectorAll('.page').forEach(div=>div.style.display='none');
+  document.getElementById(page).style.display='block';
+}
 
 // ==================== CARREGAR PLANILHAS ====================
-const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
-const productionSheetsNames = ['Produção Continental','Produção Anasc Norte','Produção Anasc Sul','Produção Anasc Florianopolis'];
-
+const sheetId='1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
 async function loadSheetData(){
-  const errorBox = document.getElementById('errorBox'); errorBox.textContent='';
-  try {
-    // Boletos
+  const errorBox=document.getElementById('errorBox'); errorBox.textContent='';
+  try{
+    // Página1 = boletos
     const res1 = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`);
     const text1 = await res1.text();
-    const json1 = JSON.parse(text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1));
-    sheetData = (json1.table.rows||[]).map(r=>({
-      nome: r.c[0]?.v||"",
-      placa: r.c[1]?.v||"",
-      status: r.c[2]?.v||"",
-      voluntario: r.c[3]?.v||"",
-      cliente: r.c[4]?.v||"",
-      dataContrato: r.c[5]?.f||r.c[5]?.v||"",
-      linkBoleto: r.c[6]?.v||""
+    const jsonText1 = text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1);
+    const data1 = JSON.parse(jsonText1);
+    sheetData=(data1.table.rows||[]).map(r=>({
+      nome:r.c[0]?.v||"",
+      placa:r.c[1]?.v||"",
+      status:r.c[2]?.v||"",
+      voluntario:(r.c[3]?.v||"").toString(),
+      cliente:(r.c[4]?.v||"").toString(),
+      dataContrato:r.c[5]?.f||r.c[5]?.v||"",
+      linkBoleto:r.c[6]?.v||""
     }));
 
-    // Produção de cada planilha
+    // Produção → várias planilhas
     for(const sheetName of productionSheetsNames){
-      const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`);
+      const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}`);
       const text = await res.text();
-      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
-      producaoSheets[sheetName] = (json.table.rows||[]).map(r=>({
-        voluntario: r.c[0]?.v||"",
-        ativos: Number(r.c[1]?.v||0),
-        pendentes: Number(r.c[2]?.v||0),
-        reativacao: Number(r.c[3]?.v||0),
-        inadimplente: Number(r.c[4]?.v||0),
-        pendenteRastreador: Number(r.c[5]?.v||0),
-        negado: Number(r.c[6]?.v||0),
-        total: Number(r.c[7]?.v||0)
+      const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
+      const data = JSON.parse(jsonText);
+      producaoSheets[sheetName]=(data.table.rows||[]).map(r=>({
+        voluntario:r.c[0]?.v||"",
+        ativos:Number(r.c[1]?.v||0),
+        pendentes:Number(r.c[2]?.v||0),
+        reativacao:Number(r.c[3]?.v||0),
+        inadimplente:Number(r.c[4]?.v||0),
+        pendenteRastreador:Number(r.c[5]?.v||0),
+        negado:Number(r.c[6]?.v||0),
+        total:Number(r.c[7]?.v||0)
       }));
     }
 
-    renderBoletos();
-    renderProducao();
-    renderCardsClientes();
-
-    if(currentUser.role==="master"){
-      const clientes = [...new Set(sheetData.map(x=>x.cliente).filter(Boolean))];
-      const select = document.getElementById("filtroCliente");
-      select.innerHTML="<option value=''>Todos</option>";
-      clientes.forEach(c=>{const opt=document.createElement("option");opt.value=c;opt.textContent=c;select.appendChild(opt);});
+    // preencher filtro clientes (masters)
+    if(currentUser.role==='master'){
+      const clientes=[...new Set(sheetData.map(x=>x.cliente).filter(Boolean))];
+      const select=document.getElementById("filtroCliente"); select.innerHTML="<option value=''>Todos</option>";
+      clientes.forEach(c=>{ const opt=document.createElement("option"); opt.value=c; opt.textContent=c; select.appendChild(opt); });
     }
 
-  } catch(e){ console.error(e); errorBox.textContent="Erro ao carregar dados: "+e.message; }
+    renderBoletos(); renderProducao(); renderCardsClientes();
+  }catch(e){ errorBox.textContent="Erro ao carregar dados: "+e.message; console.error(e);}
 }
 
 // ==================== RENDER BOLETOS ====================
 function renderBoletos(){
   if(!currentUser) return;
-  let filtrados = sheetData.slice();
+  let filtrados=sheetData.slice();
   if(currentUser.role==="master"){
-    const clienteFiltro = document.getElementById("filtroCliente").value;
-    if(clienteFiltro) filtrados = filtrados.filter(x=>x.cliente===clienteFiltro);
-  } else filtrados = filtrados.filter(item=>(item.cliente||"").toLowerCase() === (currentUser.cliente||"").toLowerCase());
+    const clienteFiltro=document.getElementById("filtroCliente").value;
+    if(clienteFiltro) filtrados=filtrados.filter(x=>x.cliente.toUpperCase()===clienteFiltro.toUpperCase());
+  } else filtrados=filtrados.filter(x=>x.cliente.toUpperCase()===currentUser.cliente.toUpperCase());
 
-  document.getElementById('baseAtiva').textContent = new Set(filtrados.map(x=>x.nome.trim())).size;
-  document.getElementById('boletosAberto').textContent = filtrados.filter(x=>x.status.toLowerCase()==="aberto").length;
-
-  const tbody = document.querySelector('#boletosTable tbody'); tbody.innerHTML='';
+  const tbody=document.querySelector('#boletosTable tbody'); tbody.innerHTML='';
   filtrados.forEach(item=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML=`
-      <td>${item.nome}</td>
-      <td>${item.placa}</td>
-      <td>${item.voluntario}</td>
-      <td>${item.cliente}</td>
-      <td>${item.dataContrato}</td>
-      <td>${item.status}</td>
-      <td>${item.linkBoleto ? `<a href="${item.linkBoleto}" target="_blank">🔗 Boleto</a>` : ''}</td>
-    `;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${item.nome}</td><td>${item.placa}</td><td>${item.voluntario}</td><td>${item.cliente}</td><td>${item.dataContrato}</td><td>${item.status}</td><td>${item.linkBoleto?`<a href="${item.linkBoleto}" target="_blank">🔗 Boleto</a>`:""}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -314,80 +313,76 @@ function renderBoletos(){
 // ==================== RENDER PRODUÇÃO ====================
 function renderProducao(){
   if(!currentUser) return;
-  let allFiltered = [];
+  let planilhas=productionSheetsNames.slice();
+  const clienteFiltro=document.getElementById("filtroCliente")?.value;
+  if(clienteFiltro) planilhas=planilhas.filter(p=>p.toUpperCase().includes(clienteFiltro.toUpperCase()));
 
-  for(const [sheetName,data] of Object.entries(producaoSheets)){
-    let filtered = data.slice();
-    const clienteFiltro = document.getElementById("filtroCliente")?.value;
-    if(currentUser.role==="master" && clienteFiltro){
-      if(sheetName.toLowerCase().includes(clienteFiltro.toLowerCase())) filtered=filtered;
-      else filtered=[];
-    } else if(currentUser.role==="gestor"){
-      if(!sheetName.toLowerCase().includes(currentUser.cliente.toLowerCase())) filtered=[];
-    }
-    allFiltered = allFiltered.concat(filtered);
+  let filtrados=[];
+  planilhas.forEach(p=>{ filtrados=filtrados.concat(producaoSheets[p]||[]); });
+
+  if(currentUser.role!=="master"){
+    const clienteUpper=currentUser.cliente.toUpperCase();
+    filtrados=filtrados.filter(v=>v.voluntario && sheetData.some(s=>s.voluntario===v.voluntario && s.cliente.toUpperCase()===clienteUpper));
   }
 
-  const tbody = document.querySelector('#producaoTable tbody');
-  const tfoot = document.querySelector('#producaoTable tfoot'); tbody.innerHTML=''; tfoot.innerHTML='';
+  const tbody=document.querySelector('#producaoTable tbody'); const tfoot=document.querySelector('#producaoTable tfoot');
+  tbody.innerHTML=''; tfoot.innerHTML='';
 
-  let soma={ativos:0,pendentes:0,reativacao:0,inadimplente:0,pendenteRastreador:0,negado:0,total:0};
-  allFiltered.forEach(item=>{
-    soma.ativos+=item.ativos;soma.pendentes+=item.pendentes;soma.reativacao+=item.reativacao;
-    soma.inadimplente+=item.inadimplente;soma.pendenteRastreador+=item.pendenteRastreador;
-    soma.negado+=item.negado;soma.total+=item.total;
+  let soma={ativos:0, pendentes:0, reativacao:0, inadimplente:0, pendenteRastreador:0, negado:0, total:0};
+  filtrados.forEach(item=>{
+    soma.ativos+=item.ativos; soma.pendentes+=item.pendentes; soma.reativacao+=item.reativacao;
+    soma.inadimplente+=item.inadimplente; soma.pendenteRastreador+=item.pendenteRastreador; soma.negado+=item.negado; soma.total+=item.total;
+
     const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${item.voluntario}</td>
-      <td>${item.ativos}</td>
-      <td>${item.pendentes}</td>
-      <td>${item.reativacao}</td>
-      <td>${item.inadimplente}</td>
-      <td>${item.pendenteRastreador}</td>
-      <td>${item.negado}</td>
-      <td>${item.total}</td>
-    `;
+    tr.innerHTML=`<td>${item.voluntario}</td><td>${item.ativos}</td><td>${item.pendentes}</td><td>${item.reativacao}</td><td>${item.inadimplente}</td><td>${item.pendenteRastreador}</td><td>${item.negado}</td><td>${item.total}</td>`;
     tbody.appendChild(tr);
   });
 
-  tfoot.innerHTML=`
-    <tr style="font-weight:bold; background:#ecf0f1;">
-      <td>Total</td>
-      <td>${soma.ativos}</td>
-      <td>${soma.pendentes}</td>
-      <td>${soma.reativacao}</td>
-      <td>${soma.inadimplente}</td>
-      <td>${soma.pendenteRastreador}</td>
-      <td>${soma.negado}</td>
-      <td>${soma.total}</td>
-    </tr>
-  `;
-  document.getElementById('totalProducao').textContent = soma.total;
+  tfoot.innerHTML=`<tr style="font-weight:bold;background:#ecf0f1;"><td>Total</td><td>${soma.ativos}</td><td>${soma.pendentes}</td><td>${soma.reativacao}</td><td>${soma.inadimplente}</td><td>${soma.pendenteRastreador}</td><td>${soma.negado}</td><td>${soma.total}</td></tr>`;
 
-  const ctx = document.getElementById("graficoProducao").getContext("2d");
+  document.getElementById('totalProducaoTotal').textContent = soma.total;
+
+  // gráfico
+  const ctx=document.getElementById("graficoProducao").getContext("2d");
   if(window.graficoProducao) window.graficoProducao.destroy();
-  window.graficoProducao = new Chart(ctx,{
-    type:"bar",
-    data:{ labels:allFiltered.map(x=>x.voluntario), datasets:[{label:"Total",data:allFiltered.map(x=>x.total), backgroundColor:allFiltered.map(()=> "rgba(54,162,235,0.7)")}] },
-    options:{responsive:true, plugins:{legend:{display:false}, title:{display:true,text:"Total por Voluntário"}}, scales:{x:{title:{display:true,text:"Voluntário"}}, y:{beginAtZero:true, title:{display:true,text:"Total"}}}}
-  });
+  const labels=filtrados.map(x=>x.voluntario); const totals=filtrados.map(x=>x.total);
+  window.graficoProducao=new Chart(ctx,{type:"bar",data:{labels,datasets:[{label:"Total por Voluntário",data:totals,backgroundColor:labels.map(_=>`rgba(54, 162, 235,0.7)`) } ]},options:{responsive:true,plugins:{legend:{display:false},title:{display:true,text:"Total por Voluntário"}},scales:{x:{title:{display:true,text:"Voluntário"}},y:{beginAtZero:true,title:{display:true,text:"Total"}}}}});
 }
 
 // ==================== RENDER CARDS CLIENTES ====================
 function renderCardsClientes(){
-  if(!currentUser || currentUser.role!=="master") return;
-  const container=document.getElementById("cardsClientes"); container.innerHTML=''; container.style.display='flex';
-  const clientesOrdem=['ANASC FLORIANOPOLIS','ANASC SUL','ANASC NORTE','CONTINENTAL'];
+  if(!currentUser) return;
+  const container=document.getElementById("cardsClientes"); container.innerHTML='';
 
+  const clientesOrdem=['ANASC FLORIANOPOLIS','ANASC NORTE','ANASC SUL','CONTINENTAL'];
   clientesOrdem.forEach(cliente=>{
-    let count = new Set(sheetData.filter(x=>x.cliente.toUpperCase()===cliente).map(x=>x.nome.trim())).size;
-    const card = document.createElement("div");
-    card.className="card";
-    card.innerHTML=`<h3>${cliente}</h3><span>${count}</span>`;
+    let baseAtiva=new Set(sheetData.filter(x=>x.cliente.toUpperCase()===cliente).map(x=>x.nome.trim())).size;
+    let boletosAberto=sheetData.filter(x=>x.cliente.toUpperCase()===cliente && x.status.toLowerCase()==='aberto').length;
+
+    let producaoTotal=0;
+    for(const sheetName of productionSheetsNames){
+      if(sheetName.toUpperCase().includes(cliente)){
+        producaoTotal+=producaoSheets[sheetName].reduce((acc,v)=>acc+v.total,0);
+      }
+    }
+
+    const card=document.createElement("div"); card.className="card";
+    card.innerHTML=`
+      <h3>${cliente}</h3>
+      <p>Base Ativa: <strong>${baseAtiva}</strong></p>
+      <p>Boletos Aberto: <strong>${boletosAberto}</strong></p>
+      <p>Produção Mês: <strong>${producaoTotal}</strong></p>
+    `;
     container.appendChild(card);
   });
+
+  // Atualiza totais gerais
+  document.getElementById('baseAtivaTotal').textContent = new Set(sheetData.map(x=>x.nome.trim())).size;
+  document.getElementById('boletosAbertoTotal').textContent = sheetData.filter(x=>x.status.toLowerCase()==='aberto').length;
+  let somaTotal=0;
+  for(const sheetName of productionSheetsNames){ somaTotal+=producaoSheets[sheetName].reduce((acc,v)=>acc+v.total,0); }
+  document.getElementById('totalProducaoTotal').textContent=somaTotal;
 }
 </script>
-
 </body>
 </html>
