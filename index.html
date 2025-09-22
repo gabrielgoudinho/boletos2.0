@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Sistema de Boletos</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #333; }
@@ -24,18 +25,9 @@
       text-decoration: none;
     }
 
-    #app {
-      max-width: 1100px;
-      margin: 20px auto;
-      padding: 10px;
-    }
+    #app { max-width: 1200px; margin: 20px auto; padding: 10px; }
 
-    nav {
-      margin: 20px 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
+    nav { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; }
     nav button {
       flex: 1;
       min-width: 140px;
@@ -49,12 +41,7 @@
     }
     nav button:hover { background: #2980b9; }
 
-    .cards {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
+    .cards { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
     .card {
       flex: 1;
       min-width: 200px;
@@ -72,7 +59,8 @@
       padding: 15px;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      overflow-x: auto; /* scroll horizontal em tabelas no mobile */
+      overflow-x: auto;
+      margin-bottom: 20px;
     }
 
     table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; min-width: 600px; }
@@ -90,7 +78,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     #login h2 { margin-bottom: 15px; text-align: center; }
-    #login input {
+    #login input, #login select {
       width: 100%;
       margin: 8px 0;
       padding: 10px;
@@ -113,7 +101,6 @@
     #loginError { margin-top: 10px; }
     #errorBox { color: red; margin-top: 20px; }
 
-    /* ===== RESPONSIVIDADE ===== */
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; gap: 10px; }
       nav { flex-direction: column; }
@@ -122,23 +109,20 @@
       .card { width: 100%; }
       table { font-size: 13px; }
     }
-
-    @media (max-width: 480px) {
-      header h1 { font-size: 18px; }
-      .card h3 { font-size: 14px; }
-      .card span { font-size: 20px; }
-      th, td { padding: 8px; font-size: 12px; }
-    }
   </style>
 </head>
 <body>
 
   <div id="login">
     <h2>Login</h2>
-    <input type="text" id="username" placeholder="Usuário" />
+    <input type="text" id="username" placeholder="Usuário (ex: gabriel clubbea)" />
     <input type="password" id="password" placeholder="Senha" />
     <button onclick="login()">Entrar</button>
     <p id="loginError" style="color:red;"></p>
+    <p style="margin-top:8px;font-size:13px;color:#666;">
+      Exemplos de usuário: <br>
+      <strong>gabriel clubbea</strong> (master) / <strong>rodger</strong> (master) / <strong>continental / luiz ricardo</strong> (gestor)
+    </p>
   </div>
 
   <div id="app" style="display:none;">
@@ -170,6 +154,14 @@
       </div>
     </div>
 
+    <!-- filtro aparece só para masters -->
+    <div id="filtroClienteBox" style="display:none; margin-bottom:20px;">
+      <label for="filtroCliente"><b>Filtrar por cliente:</b></label>
+      <select id="filtroCliente" onchange="renderBoletos(); renderProducao();">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
     <div id="boletos" class="page">
       <h3>Lista de Boletos</h3>
       <table id="boletosTable">
@@ -178,6 +170,7 @@
             <th>Nome</th>
             <th>Placa</th>
             <th>Voluntário</th>
+            <th>Cliente</th>
             <th>Data Contrato</th>
             <th>Status</th>
             <th>Link do Boleto</th>
@@ -193,24 +186,45 @@
         <thead>
           <tr>
             <th>Voluntário</th>
-            <th>Produziu</th>
+            <th>Ativos</th>
+            <th>Pendentes</th>
+            <th>Reativação</th>
+            <th>Inadimplente Pendente</th>
+            <th>Pendente Rastreador</th>
+            <th>Negado</th>
+            <th>Total</th>
           </tr>
         </thead>
         <tbody></tbody>
+        <tfoot></tfoot>
       </table>
+
+      <div style="margin-top:20px;">
+        <canvas id="graficoProducao" height="150"></canvas>
+      </div>
     </div>
 
     <div id="errorBox"></div>
   </div>
 
 <script>
+  // Usuários: chaves em lowercase porque no login fazemos .toLowerCase()
   const users = {
-    "gabriel clubbea": { password: "123456", role: "gestor" },
-    "rodger": { password: "123456", role: "voluntario" },
+    "gabriel clubbea": { password: "123456", role: "master", cliente: "ALL" },
+    "rodger": { password: "123456", role: "master", cliente: "ALL" },
+
+    "continental / luiz ricardo": { password: "654321", role: "gestor", cliente: "CONTINENTAL" },
+    "anasc florianopolis / janaina": { password: "654321", role: "gestor", cliente: "ANASC FLORIANOPOLIS" },
+    "anasc sul / rodger": { password: "654321", role: "gestor", cliente: "ANASC SUL" },
+    "anasc norte / mauricio": { password: "654321", role: "gestor", cliente: "ANASC NORTE" },
+
+    // Se quiser adicionar voluntários que façam login direto, coloque aqui:
+    // "voluntario exemplo": { password: "000000", role: "voluntario", cliente: "ANASC SUL" },
   };
 
   let currentUser = null;
   let sheetData = [];
+  let producaoData = [];
 
   function login() {
     const userInput = document.getElementById('username').value.trim().toLowerCase();
@@ -218,11 +232,21 @@
     const errorEl = document.getElementById('loginError');
 
     if (users[userInput] && users[userInput].password === passInput) {
-      currentUser = { name: userInput, role: users[userInput].role };
+      currentUser = { name: userInput, ...users[userInput] };
+      // garantir cliente string em lowercase para comparação segura
+      currentUser.cliente = (currentUser.cliente || "").toString();
+
       document.getElementById('login').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       document.getElementById('userNameDisplay').textContent = userInput;
-      document.getElementById('userRole').textContent = users[userInput].role;
+      document.getElementById('userRole').textContent = currentUser.role;
+
+      if (currentUser.role === "master") {
+        document.getElementById('filtroClienteBox').style.display = "block";
+      } else {
+        document.getElementById('filtroClienteBox').style.display = "none";
+      }
+
       loadSheetData();
     } else {
       errorEl.textContent = 'Usuário ou senha inválidos!';
@@ -232,11 +256,14 @@
   function logout() {
     currentUser = null;
     sheetData = [];
+    producaoData = [];
     document.getElementById('login').style.display = 'block';
     document.getElementById('app').style.display = 'none';
     document.getElementById('loginError').textContent = '';
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
+    // destruir gráfico se existir
+    if (window.graficoProducao) { window.graficoProducao.destroy(); window.graficoProducao = null; }
   }
 
   function showPage(page) {
@@ -244,70 +271,102 @@
     document.getElementById(page).style.display = 'block';
   }
 
+  // Ajuste aqui seu sheetId
   const sheetId = '1dEqBfpPAyIG8h9GjYhrvMz08AYBnu3qa2ZvVVy_Fl_k';
-  const queryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+  // Observação: os nomes das planilhas (sheet) precisam bater com os seus (use acentos se usar)
+  const queryUrl1 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página1`;
+  const queryUrl2 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Página2`;
 
   async function loadSheetData() {
     const errorBox = document.getElementById('errorBox');
     errorBox.textContent = '';
-
     try {
-      const res = await fetch(queryUrl);
-      const text = await res.text();
+      // Página1 (boletos)
+      const res1 = await fetch(queryUrl1);
+      const text1 = await res1.text();
+      if (!res1.ok) throw new Error(`Erro HTTP Página1: ${res1.status}`);
+      const jsonText1 = text1.substring(text1.indexOf('{'), text1.lastIndexOf('}')+1);
+      const data1 = JSON.parse(jsonText1);
+      sheetData = (data1.table.rows || []).map(r => ({
+        nome: r.c[0]?.v || "",
+        placa: r.c[1]?.v || "",
+        status: r.c[2]?.v || "",
+        voluntario: (r.c[3]?.v || "").toString(),
+        cliente: (r.c[4]?.v || "").toString(),
+        dataContrato: r.c[5]?.f || r.c[5]?.v || "",
+        linkBoleto: r.c[6]?.v || ""
+      }));
 
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      if (text.includes('"status":"error"') || text.toLowerCase().includes('access_denied')) {
-        throw new Error('Acesso negado ou erro ao acessar planilha');
+      // Página2 (produção)
+      const res2 = await fetch(queryUrl2);
+      const text2 = await res2.text();
+      if (!res2.ok) throw new Error(`Erro HTTP Página2: ${res2.status}`);
+      const jsonText2 = text2.substring(text2.indexOf('{'), text2.lastIndexOf('}')+1);
+      const data2 = JSON.parse(jsonText2);
+      producaoData = (data2.table.rows || []).map(r => ({
+        voluntario: r.c[0]?.v || "",
+        ativos: Number(r.c[1]?.v || 0),
+        pendentes: Number(r.c[2]?.v || 0),
+        reativacao: Number(r.c[3]?.v || 0),
+        inadimplente: Number(r.c[4]?.v || 0),
+        pendenteRastreador: Number(r.c[5]?.v || 0),
+        negado: Number(r.c[6]?.v || 0),
+        total: Number(r.c[7]?.v || 0)
+      }));
+
+      // preencher filtro clientes (masters)
+      if (currentUser.role === "master") {
+        const clientes = [...new Set(sheetData.map(x => x.cliente).filter(Boolean))];
+        const select = document.getElementById("filtroCliente");
+        select.innerHTML = "<option value=''>Todos</option>";
+        clientes.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          select.appendChild(opt);
+        });
       }
-
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start < 0 || end < 0) throw new Error('Formato do JSON inválido');
-
-      const jsonText = text.substring(start, end + 1);
-      const data = JSON.parse(jsonText);
-
-      if (!data.table || !data.table.rows) throw new Error('JSON não contém dados esperados');
-
-      sheetData = data.table.rows.map(row => {
-        return {
-          nome: row.c[0]?.v || '',
-          placa: row.c[1]?.v || '',
-          status: row.c[2]?.v || '',
-          voluntario: row.c[3]?.v || '',
-          dataContrato: row.c[4]?.f || row.c[4]?.v || '',
-          linkBoleto: row.c[5]?.v || ''
-        };
-      });
 
       renderBoletos();
       renderProducao();
     } catch (e) {
-      console.error('Erro no loadSheetData:', e);
-      errorBox.textContent = 'Erro ao carregar dados: ' + e.message;
+      console.error(e);
+      errorBox.textContent = "Erro ao carregar dados: " + e.message;
     }
   }
 
   function renderBoletos() {
-    let filtrados = currentUser.role === 'gestor'
-      ? sheetData
-      : sheetData.filter(item => item.voluntario.toLowerCase() === currentUser.name);
+    let filtrados = sheetData.slice();
 
-    const baseAtiva = new Set(filtrados.map(item => item.nome.trim())).size;
-    const boletosAberto = filtrados.filter(item => (item.status || '').toLowerCase() === 'aberto').length;
+    if (!currentUser) return;
+
+    if (currentUser.role === "master") {
+      const clienteFiltro = document.getElementById("filtroCliente").value;
+      if (clienteFiltro) filtrados = filtrados.filter(x => x.cliente === clienteFiltro);
+    } else if (currentUser.role === "gestor") {
+      filtrados = filtrados.filter(item => (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase());
+    } else { // voluntário
+      filtrados = filtrados.filter(item =>
+        (item.voluntario || "").toLowerCase() === currentUser.name.toLowerCase() &&
+        (item.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()
+      );
+    }
+
+    const baseAtiva = new Set(filtrados.map(x => x.nome.trim())).size;
+    const boletosAberto = filtrados.filter(x => (x.status || "").toLowerCase() === "aberto").length;
 
     document.getElementById('baseAtiva').textContent = baseAtiva;
     document.getElementById('boletosAberto').textContent = boletosAberto;
 
     const tbody = document.querySelector('#boletosTable tbody');
     tbody.innerHTML = '';
-
     filtrados.forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.nome}</td>
         <td>${item.placa}</td>
         <td>${item.voluntario}</td>
+        <td>${item.cliente}</td>
         <td>${item.dataContrato}</td>
         <td>${item.status}</td>
         <td>${item.linkBoleto ? `<a href="${item.linkBoleto}" target="_blank">🔗 Boleto</a>` : ''}</td>
@@ -317,34 +376,101 @@
   }
 
   function renderProducao() {
-    const abertos = sheetData.filter(item => (item.status || '').toLowerCase() === 'aberto');
+    if (!currentUser) return;
 
-    let filtrados = currentUser.role === 'gestor'
-      ? abertos
-      : abertos.filter(item => item.voluntario.toLowerCase() === currentUser.name);
+    let filtrados = producaoData.slice();
 
-    const producaoMap = {};
-    filtrados.forEach(item => {
-      if(item.voluntario) {
-        const v = item.voluntario.trim();
-        producaoMap[v] = (producaoMap[v] || 0) + 1;
+    if (currentUser.role === "master") {
+      const clienteFiltro = document.getElementById("filtroCliente").value;
+      if (clienteFiltro) {
+        // manter voluntários que aparecem na sheetData com esse cliente
+        const volsDoCliente = new Set(sheetData.filter(s => s.cliente === clienteFiltro).map(s => s.voluntario));
+        filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
       }
-    });
-
-    const tbody = document.querySelector('#producaoTable tbody');
-    tbody.innerHTML = '';
-    let total = 0;
-
-    for (const [vol, count] of Object.entries(producaoMap)) {
-      total += count;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${vol}</td><td>${count}</td>`;
-      tbody.appendChild(tr);
+    } else if (currentUser.role === "gestor") {
+      const volsDoCliente = new Set(sheetData.filter(s => (s.cliente || "").toLowerCase() === (currentUser.cliente || "").toLowerCase()).map(s => s.voluntario));
+      filtrados = filtrados.filter(p => volsDoCliente.has(p.voluntario));
+    } else { // voluntario
+      filtrados = filtrados.filter(p => (p.voluntario || "").toLowerCase() === currentUser.name.toLowerCase());
     }
 
-    document.getElementById('totalProducao').textContent = total;
+    const tbody = document.querySelector('#producaoTable tbody');
+    const tfoot = document.querySelector('#producaoTable tfoot');
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+
+    // somas
+    let soma = {ativos:0, pendentes:0, reativacao:0, inadimplente:0, pendenteRastreador:0, negado:0, total:0};
+
+    filtrados.forEach(item => {
+      soma.ativos += item.ativos;
+      soma.pendentes += item.pendentes;
+      soma.reativacao += item.reativacao;
+      soma.inadimplente += item.inadimplente;
+      soma.pendenteRastreador += item.pendenteRastreador;
+      soma.negado += item.negado;
+      soma.total += item.total;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.voluntario}</td>
+        <td>${item.ativos}</td>
+        <td>${item.pendentes}</td>
+        <td>${item.reativacao}</td>
+        <td>${item.inadimplente}</td>
+        <td>${item.pendenteRastreador}</td>
+        <td>${item.negado}</td>
+        <td>${item.total}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tfoot.innerHTML = `
+      <tr style="font-weight:bold; background:#ecf0f1;">
+        <td>Total</td>
+        <td>${soma.ativos}</td>
+        <td>${soma.pendentes}</td>
+        <td>${soma.reativacao}</td>
+        <td>${soma.inadimplente}</td>
+        <td>${soma.pendenteRastreador}</td>
+        <td>${soma.negado}</td>
+        <td>${soma.total}</td>
+      </tr>
+    `;
+
+    document.getElementById('totalProducao').textContent = soma.total;
+
+    // Gráfico: apenas o total de cada voluntário
+    const ctx = document.getElementById("graficoProducao").getContext("2d");
+    if (window.graficoProducao) window.graficoProducao.destroy();
+    const labels = filtrados.map(x => x.voluntario);
+    const totals = filtrados.map(x => x.total);
+
+    window.graficoProducao = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Total por Voluntário",
+          data: totals,
+          backgroundColor: labels.map((_,i) => `rgba(54, 162, 235, 0.7)`)
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: "Total por Voluntário" }
+        },
+        scales: {
+          x: { title: { display: true, text: "Voluntário" } },
+          y: { beginAtZero: true, title: { display: true, text: "Total" } }
+        }
+      }
+    });
   }
 </script>
 
 </body>
 </html>
+
